@@ -133,7 +133,9 @@ def login(form: LoginData, db: Session = Depends(get_db)):
 # --- ROTAS DE OCORRÊNCIAS ---
 
 @app.get("/problemas", response_model=List[ProblemaResponse])
-def listar_probs(db: Session = Depends(get_db)): return db.query(models.Problema).all()
+def listar_probs(db: Session = Depends(get_db)):
+    # Filtra para trazer apenas o que for DIFERENTE (!=) de 'arquivado'
+    return db.query(models.Problema).filter(models.Problema.status != 'arquivado').all()
 
 @app.post("/problemas", response_model=ProblemaResponse)
 def criar_prob(p: ProblemaCreate, db: Session = Depends(get_db)):
