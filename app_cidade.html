@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Zeladoria Conectada (API)</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+    <style>
+        body { margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        #map { height: 100vh; width: 100%; z-index: 1; }
+        
+        .perfil-bar {
+            position: fixed; top: 0; left: 0; width: 100%;
+            background: #263238; color: white; padding: 10px;
+            z-index: 2000; display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3); box-sizing: border-box;
+        }
+        .perfil-select { padding: 5px; border-radius: 4px; background: #fff; border: none; font-weight: bold; }
+
+        .fab {
+            position: fixed; bottom: 30px; right: 20px;
+            background-color: #d32f2f; color: white;
+            width: 60px; height: 60px; border-radius: 50%;
+            text-align: center; line-height: 75px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3); cursor: pointer; z-index: 1000; font-size: 30px;
+        }
+
+        .modal {
+            display: none; position: fixed; bottom: 0; left: 0;
+            width: 100%; background: white; padding: 20px;
+            box-sizing: border-box; border-top-left-radius: 20px; border-top-right-radius: 20px;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.2); z-index: 1001;
+            animation: slideUp 0.3s; max-height: 85vh; overflow-y: auto;
+        }
+        @keyframes slideUp { from {bottom: -100px; opacity: 0;} to {bottom: 0; opacity: 1;} }
+
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        select, textarea, button, input { width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ddd; font-size: 16px; background: white;}
+        
+        .btn-action { margin-top: 5px; width: 100%; padding: 8px; border-radius: 5px; cursor: pointer; border: none; font-weight: bold; color: white; }
+        .btn-confirmar { background-color: #2196F3; }
+        .btn-resolvido { background-color: #4CAF50; }
+        .btn-analise { background-color: #FF9800; color: #333;}
+        .btn-delete { background-color: #f44336; margin-top: 10px;}
+
+        .status-badge { padding: 3px 8px; border-radius: 10px; font-size: 11px; font-weight: bold; color: white;}
+        .st-aberto { background: #d32f2f; }
+        .st-analise { background: #FF9800; }
+        .st-resolvido { background: #4CAF50; }
+
+        .msg-prefeitura { background: #fff3e0; border-left: 4px solid #FF9800; padding: 8px; font-size: 12px; margin: 8px 0; font-style: italic; }
+    </style>
+</head>
+<body>
+
+    <div class="perfil-bar">
+        <span>👤 Acesso:</span>
+        <select id="roleSelector" class="perfil-select" onchange="mudarPerfil()">
+            <option value="cidadao">Cidadão</option>
+            <option value="prefeitura">🏛️ Prefeitura</option>
+            <option value="admin">👮 Admin</option>
+        </select>
+        <button id="btnStats" onclick="abrirStats()" style="width: auto; padding: 5px 10px; font-size: 12px; display:none; margin-left:10px;">📊 Dados</button>
+    </div>
+
+    <div id="map"></div>
+    <div class="fab" id="fabBtn" onclick="abrirModalRelato()"><span class="material-icons">add_location_alt</span></div>
+
+    <div class="modal" id="modalRelato">
+        <h3>📢 Relatar Ocorrência</h3>
+        <div class="form-group">
+            <label>Selecione o problema:</label>
+            <select id="tipoProblema">
+                <optgroup label="🚧 Vias e Calçadas">
+                    <option value="buraco">Buraco na Rua</option>
+                    <option value="calcada">Calçada Quebrada</option>
+                    <option value="bueiro">Boca de Lobo Entupida</option>
+                </optgroup>
+                <optgroup label="🗑️ Limpeza">
+                    <option value="lixo_coleta">Coleta de Lixo Falhou</option>
+                    <option value="entulho">Entulho/Lixo Ilegal</option>
+                    <option value="vazamento">Vazamento de Água</option>
+                </optgroup>
+                <optgroup label="💡 Iluminação">
+                    <option value="luz_queimada">Lâmpada Queimada</option>
+                    <option value="fios">Fios Soltos</option>
+                </optgroup>
+                <optgroup label="🌳 Natureza/Zoonoses">
+                    <option value="mato">Mato Alto</option>
+                    <option value="dengue">Foco de Dengue</option>
+                    <option value="arvore_caida">Árvore Caída</option>
+                </optgroup>
+                <optgroup label="⚠️ Segurança">
+                    <option value="inseguranca">Local Inseguro</option>
+                    <option value="barulho">Poluição Sonora</option>
+                </optgroup>
+            </select>
+        </div>
+        <div class="form-group"><textarea id="descricao" rows="2" placeholder="Detalhes do local..."></textarea></div>
+        <button class="btn-action btn-resolvido" onclick="salvarRelato()">REGISTRAR (ENVIAR PARA SERVIDOR)</button>
+        <button class="btn-action btn-delete" style="background:#777" onclick="fecharModais()">CANCELAR</button>
+    </div>
+
+    <div class="modal" id="modalStats" style="height: 60vh;">
+        <h3>📊 Dados do Servidor</h3>
+        <canvas id="chartStatus"></canvas>
+        <div id="statsTexto" style="margin-top:20px; font-size:14px; text-align:center;"></div>
+        <button class="btn-action btn-delete" style="background:#777" onclick="fecharModais()">FECHAR</button>
+    </div>
+
+    <script>
+        // --- CONFIGURAÇÃO DA API ---
+        const API_URL = "http://127.0.0.1:8000";
+
+        var map = L.map('map').setView([-23.5505, -46.6333], 13);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+        var userLat = 0, userLng = 0;
+        var currentRole = 'cidadao';
+        
+        // Pega GPS
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function(pos) {
+                userLat = pos.coords.latitude; userLng = pos.coords.longitude;
+                map.setView([userLat, userLng], 16);
+                L.circleMarker([userLat, userLng], { radius: 8, color: "#2196F3" }).addTo(map).bindPopup("Você");
+            });
+        }
+
+        // --- FUNÇÕES DE API (ASYNC) ---
+
+        // 1. CARREGAR (GET)
+        async function carregarProblemas() {
+            try {
+                // Remove todos os pinos atuais para redesenhar
+                map.eachLayer((layer) => { 
+                    if(layer instanceof L.Marker) { map.removeLayer(layer); } 
+                });
+
+                const response = await fetch(`${API_URL}/problemas`);
+                const dados = await response.json();
+
+                // Regra: Cidadão não vê arquivado
+                const visiveis = (currentRole === 'cidadao') ? dados.filter(p => p.status !== 'arquivado') : dados;
+
+                visiveis.forEach(p => adicionarPinoNoMapa(p));
+
+            } catch (error) {
+                console.error(error);
+                alert("Erro ao conectar no servidor. Verifique se o terminal preto está rodando.");
+            }
+        }
+
+        // 2. SALVAR NOVO (POST)
+        async function salvarRelato() {
+            const payload = {
+                tipo: document.getElementById('tipoProblema').value,
+                descricao: document.getElementById('descricao').value,
+                lat: userLat,
+                lng: userLng
+            };
+
+            const response = await fetch(`${API_URL}/problemas`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                fecharModais();
+                document.getElementById('descricao').value = "";
+                carregarProblemas(); // Recarrega o mapa
+                alert("Enviado com sucesso para o banco de dados!");
+            }
+        }
+
+        // 3. VOTAR (POST)
+        async function votarProblema(id) {
+            await fetch(`${API_URL}/problemas/${id}/votar`, { method: 'POST' });
+            alert("Voto computado no servidor!");
+            carregarProblemas(); // Atualiza contador na tela
+        }
+
+        // 4. MUDAR STATUS E NOTA (PATCH)
+        async function mudarStatus(id, novoStatus) {
+            let url = `${API_URL}/problemas/${id}/status?status=${novoStatus}`;
+            await fetch(url, { method: 'PATCH' });
+            carregarProblemas();
+        }
+
+        async function adicionarNota(id) {
+            const nota = document.getElementById(`nota-${id}`).value;
+            if(!nota) return;
+            // No backend definimos que nota e status vão no mesmo endpoint
+            // Vamos manter o status atual, mas adicionar a nota
+            // Como simplificação, vou mandar status 'analise' ou pegamos do html se fosse mais complexo
+            let url = `${API_URL}/problemas/${id}/status?status=analise&nota=${encodeURIComponent(nota)}`;
+            await fetch(url, { method: 'PATCH' });
+            alert("Nota salva no servidor!");
+            carregarProblemas();
+        }
+
+        // 5. VALIDAR SOLUÇÃO (POST)
+        async function validarSolucao(id) {
+            const res = await fetch(`${API_URL}/problemas/${id}/validar`, { method: 'POST' });
+            const data = await res.json();
+            
+            alert(`Validado! Confirmações: ${data.validacoes}/3`);
+            carregarProblemas(); // Se chegar a 3, o pino vai sumir (arquivado)
+        }
+
+        // 6. DELETAR (DELETE)
+        async function deletarProblema(id) {
+            if(!confirm("Tem certeza que deseja apagar do Banco de Dados?")) return;
+            await fetch(`${API_URL}/problemas/${id}`, { method: 'DELETE' });
+            carregarProblemas();
+        }
+
+        // --- FUNÇÕES DE INTERFACE ---
+        
+        function pegarIcone(tipo, status) {
+            const icones = {
+                'buraco': '🕳️', 'calcada': '🚶', 'bueiro': '🌧️',
+                'lixo_coleta': '🚛', 'entulho': '🗑️', 'vazamento': '💧',
+                'luz_queimada': '🌑', 'fios': '⚡',
+                'mato': '🌾', 'dengue': '🦟', 'arvore_caida': '🪵',
+                'inseguranca': '⚠️', 'barulho': '📢'
+            };
+            let icone = icones[tipo] || '📍';
+            
+            let cor = '#d32f2f'; // Aberto
+            if(status === 'analise') cor = '#FF9800'; 
+            if(status === 'resolvido') cor = '#4CAF50'; 
+
+            return L.divIcon({
+                className: 'custom-div-icon',
+                html: `<div style='background:white; border-radius:50%; width:35px; height:35px; display:flex; align-items:center; justify-content:center; font-size:22px; border: 3px solid ${cor}; box-shadow: 2px 2px 5px rgba(0,0,0,0.3);'>${icone}</div>`,
+                iconSize: [35, 35], iconAnchor: [17, 35]
+            });
+        }
+
+        function gerarPopupHTML(dados) {
+            let labelSt = dados.status === 'aberto' ? 'ABERTO' : (dados.status === 'analise' ? 'EM ANÁLISE' : 'RESOLVIDO');
+            let classSt = dados.status === 'aberto' ? 'st-aberto' : (dados.status === 'analise' ? 'st-analise' : 'st-resolvido');
+            let titulo = dados.tipo.toUpperCase();
+
+            let html = `<b style="font-size:15px; color:#333;">${titulo}</b><br>`;
+            html += `<span class="status-badge ${classSt}">${labelSt}</span><br>`;
+            html += `<p style="margin:6px 0; font-size:13px;">${dados.descricao}</p>`;
+
+            if(dados.nota_prefeitura) {
+                html += `<div class="msg-prefeitura">🏛️ ${dados.nota_prefeitura}</div>`;
+            }
+
+            // Backend envia data simplificada (string)
+            let dataFormatada = new Date(dados.data_criacao).toLocaleDateString();
+            html += `<small style="color:#666;">📅 ${dataFormatada} | 👍 ${dados.confirmacoes} votos</small><br>`;
+
+            if (currentRole === 'cidadao') {
+                if(dados.status === 'resolvido') {
+                    html += `<button class="btn-action btn-resolvido" onclick="validarSolucao(${dados.id})">✅ Validar (${dados.validacoes_cidadao}/3)</button>`;
+                } else {
+                    html += `<button class="btn-action btn-confirmar" onclick="votarProblema(${dados.id})">👍 Eu também vi</button>`;
+                }
+            }
+            if (currentRole === 'prefeitura') {
+                if(dados.status === 'aberto') {
+                    html += `<button class="btn-action btn-analise" onclick="mudarStatus(${dados.id}, 'analise')">👀 Ciente</button>`;
+                }
+                if(dados.status !== 'resolvido') {
+                    html += `<input type="text" id="nota-${dados.id}" placeholder="Nota..." style="margin-top:5px; font-size:12px;">`;
+                    html += `<button class="btn-action btn-analise" style="background:#795548; margin-top:2px;" onclick="adicionarNota(${dados.id})">💾 Nota</button>`;
+                    html += `<button class="btn-action btn-resolvido" onclick="mudarStatus(${dados.id}, 'resolvido')">✅ Resolvido</button>`;
+                }
+            }
+            if (currentRole === 'admin') {
+                html += `<button class="btn-action btn-delete" onclick="deletarProblema(${dados.id})">🗑️ APAGAR</button>`;
+            }
+
+            return html;
+        }
+
+        function adicionarPinoNoMapa(dados) {
+            let marker = L.marker([dados.lat, dados.lng], {icon: pegarIcone(dados.tipo, dados.status)}).addTo(map);
+            marker.bindPopup(gerarPopupHTML(dados));
+        }
+
+        // --- CONTROLES GERAIS ---
+        function mudarPerfil() {
+            currentRole = document.getElementById('roleSelector').value;
+            document.getElementById('fabBtn').style.display = (currentRole === 'prefeitura') ? 'none' : 'block';
+            document.getElementById('btnStats').style.display = (currentRole === 'cidadao') ? 'none' : 'block';
+            carregarProblemas(); // Recarrega para aplicar filtros de perfil
+            alert("Perfil: " + currentRole);
+        }
+
+        function abrirModalRelato() { document.getElementById('modalRelato').style.display = 'block'; }
+        function fecharModais() { document.getElementById('modalRelato').style.display = 'none'; document.getElementById('modalStats').style.display = 'none'; }
+
+        async function abrirStats() {
+            document.getElementById('modalStats').style.display = 'block';
+            const response = await fetch(`${API_URL}/problemas`);
+            const db = await response.json();
+            
+            let abertos = db.filter(p => p.status === 'aberto').length;
+            let analise = db.filter(p => p.status === 'analise').length;
+            let resolvidos = db.filter(p => p.status === 'resolvido').length;
+            let arquivados = db.filter(p => p.status === 'arquivado').length;
+
+            document.getElementById('statsTexto').innerHTML = `Total Histórico: <b>${db.length}</b>`;
+            
+            if(window.meuGrafico) window.meuGrafico.destroy();
+            window.meuGrafico = new Chart(document.getElementById('chartStatus').getContext('2d'), {
+                type: 'doughnut',
+                data: {
+                    labels: ['Aberto', 'Análise', 'Pendente Validação', 'Arquivado'],
+                    datasets: [{ data: [abertos, analise, resolvidos, arquivados], backgroundColor: ['#d32f2f', '#FF9800', '#4CAF50', '#9E9E9E'] }]
+                }
+            });
+        }
+
+        // Inicializar
+        carregarProblemas();
+
+    </script>
+</body>
+</html>
