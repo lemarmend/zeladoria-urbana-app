@@ -10,6 +10,7 @@ from jose import jwt, JWTError
 import requests
 import models
 from database import engine, get_db
+from fastapi.staticfiles import StaticFiles
 
 # --- CONFIGURAÇÕES ---
 SECRET_KEY = "segredo-super-secreto"
@@ -20,6 +21,9 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Zeladoria Urbana")
+
+# Crie uma pasta chamada "static" na raiz do projeto se não existir!
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 app.add_middleware(
     CORSMiddleware,

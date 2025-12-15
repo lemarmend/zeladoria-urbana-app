@@ -1,102 +1,52 @@
 <!DOCTYPE html>
 <html lang="pt-br">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>Zeladoria Urbana Pro</title>
-
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 
     <style>
-        body {
-            overflow: hidden;
-            background-color: #f0f2f5;
-            font-family: 'Segoe UI', sans-serif;
-        }
-
-        /* Mapa em Tela Cheia */
-        #map {
-            height: 100vh;
-            width: 100%;
-            position: absolute;
-            top: 0;
-            left: 0;
-            z-index: 1;
-        }
-
-        /* Barra de Navegação Flutuante */
+        body { overflow: hidden; background-color: #f0f2f5; font-family: 'Segoe UI', sans-serif; }
+        #map { height: 100vh; width: 100%; position: absolute; top: 0; left: 0; z-index: 1; }
+        
         .navbar-custom {
-            position: fixed;
-            top: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 95%;
-            max-width: 600px;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(5px);
-            border-radius: 50px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
-            z-index: 1000;
-            padding: 0.5rem 1rem;
+            position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
+            width: 95%; max-width: 600px;
+            background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(5px);
+            border-radius: 50px; box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+            z-index: 1000; padding: 0.5rem 1rem;
         }
 
-        /* Botão Flutuante (+) */
         .fab {
-            position: fixed;
-            bottom: 30px;
-            right: 20px;
-            width: 65px;
-            height: 65px;
+            position: fixed; bottom: 30px; right: 20px;
+            width: 65px; height: 65px;
             background: linear-gradient(135deg, #d32f2f, #b71c1c);
-            color: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            color: white; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
             box-shadow: 0 4px 12px rgba(211, 47, 47, 0.5);
-            cursor: pointer;
-            z-index: 1000;
-            transition: transform 0.2s;
+            cursor: pointer; z-index: 1000; transition: transform 0.2s;
         }
+        .fab:active { transform: scale(0.95); }
 
-        .fab:active {
-            transform: scale(0.95);
-        }
-
-        /* Tela de Login (Overlay) */
         #loginOverlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #263238;
-            z-index: 9999;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            overflow-y: auto;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #263238; z-index: 9999;
+            display: flex; align-items: center; justify-content: center;
+            flex-direction: column; overflow-y: auto;
         }
 
-        /* Ícones do Mapa */
         .custom-marker {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: white;
-            border-radius: 50%;
-            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
-            font-size: 20px;
-            width: 35px;
-            height: 35px;
+            display: flex; align-items: center; justify-content: center;
+            background: white; border-radius: 50%;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+            font-size: 20px; width: 35px; height: 35px;
         }
     </style>
 </head>
-
 <body>
 
     <div id="loginOverlay">
@@ -105,18 +55,16 @@
                 <span class="material-icons text-primary" style="font-size: 50px;">location_city</span>
             </div>
             <h2 class="mb-4 fw-bold text-dark">Zeladoria App</h2>
-
+            
             <div id="formLogin">
                 <input type="email" id="emailLogin" class="form-control mb-3" placeholder="admin@city.com">
                 <input type="password" id="senhaLogin" class="form-control mb-3" placeholder="Senha">
                 <button onclick="fazerLoginReal()" class="btn btn-primary w-100 fw-bold mb-3">ENTRAR</button>
                 <div class="text-muted small mb-3">- OU -</div>
-                <button onclick="loginComFacebook()" class="btn btn-primary w-100 mb-3"
-                    style="background:#1877F2; border:none;">
+                <button onclick="loginComFacebook()" class="btn btn-primary w-100 mb-3" style="background:#1877F2; border:none;">
                     Entrar com Facebook
                 </button>
-                <button onclick="alternarForms()" class="btn btn-sm btn-link text-decoration-none">Criar nova
-                    conta</button>
+                <button onclick="alternarForms()" class="btn btn-sm btn-link text-decoration-none">Criar nova conta</button>
             </div>
 
             <div id="formCadastro" style="display:none;">
@@ -139,7 +87,7 @@
                 <span class="material-icons text-primary me-2">account_circle</span>
                 <span class="navbar-brand fw-bold fs-6 m-0" id="labelPerfil">CIDADÃO</span>
             </div>
-
+            
             <div>
                 <button id="btnAdmin" class="btn btn-sm btn-dark me-2" style="display:none;" onclick="abrirAdmin()">
                     ⚙️ Gerenciar
@@ -173,8 +121,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="fw-bold form-label">Detalhes</label>
-                        <textarea id="descricao" class="form-control" rows="3"
-                            placeholder="Ex: Buraco fundo na faixa da direita..."></textarea>
+                        <textarea id="descricao" class="form-control" rows="3" placeholder="Ex: Buraco fundo na faixa da direita..."></textarea>
                     </div>
                     <button class="btn btn-primary w-100 fw-bold" onclick="salvarRelato()">REPORTAR AGORA</button>
                 </div>
@@ -193,34 +140,19 @@
                     <div class="card p-3 mb-4 bg-light border-0">
                         <h6 class="fw-bold">Novo Tipo de Ocorrência</h6>
                         <div class="row g-2">
-                            <div class="col-3"><input id="newKey" class="form-control form-control-sm"
-                                    placeholder="ID (ex: neve)"></div>
-                            <div class="col-4"><input id="newTitle" class="form-control form-control-sm"
-                                    placeholder="Título (ex: Neve na Pista)"></div>
+                            <div class="col-3"><input id="newKey" class="form-control form-control-sm" placeholder="ID (ex: neve)"></div>
+                            <div class="col-4"><input id="newTitle" class="form-control form-control-sm" placeholder="Título (ex: Neve na Pista)"></div>
                             <div class="col-3">
                                 <select id="newCat" class="form-select form-select-sm">
-                                    <option>Infraestrutura</option>
-                                    <option>Segurança</option>
-                                    <option>Natureza</option>
-                                    <option>Limpeza</option>
-                                    <option>Saúde</option>
+                                    <option>Infraestrutura</option><option>Segurança</option><option>Natureza</option><option>Limpeza</option><option>Saúde</option>
                                 </select>
                             </div>
-                            <div class="col-1"><input id="newIcon" class="form-control form-control-sm"
-                                    placeholder="❄️"></div>
-                            <div class="col-1"><button onclick="adminCriarTipo()"
-                                    class="btn btn-sm btn-success w-100">+</button></div>
+                            <div class="col-1"><input id="newIcon" class="form-control form-control-sm" placeholder="❄️"></div>
+                            <div class="col-1"><button onclick="adminCriarTipo()" class="btn btn-sm btn-success w-100">+</button></div>
                         </div>
                     </div>
                     <table class="table align-middle">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Ícone</th>
-                                <th>Nome</th>
-                                <th>Categoria</th>
-                                <th>Ação</th>
-                            </tr>
-                        </thead>
+                        <thead class="table-light"><tr><th>Ícone</th><th>Nome</th><th>Categoria</th><th>Ação</th></tr></thead>
                         <tbody id="listaTiposAdmin"></tbody>
                     </table>
                 </div>
@@ -230,401 +162,12 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
     <script>
-        window.fbAsyncInit = function () {
-            FB.init({
-                appId: 'SEU_APP_ID',
-                cookie: true,
-                xfbml: true,
-                version: 'v18.0'
-            });
-        };
-        (function (d, s, id) {
-            var js, fjs = d.getElementsByTagName(s)[0];
-            if (d.getElementById(id)) return;
-            js = d.createElement(s);
-            js.id = id;
-            js.src = "https://connect.facebook.net/en_US/sdk.js";
-            fjs.parentNode.insertBefore(js, fjs);
-        }(document, 'script', 'facebook-jssdk'));
+      // SDK Facebook (Carregamento assíncrono básico)
+      (function(d, s, id){ var js, fjs = d.getElementsByTagName(s)[0]; if (d.getElementById(id)) return; js = d.createElement(s); js.id = id; js.src = "https://connect.facebook.net/en_US/sdk.js"; fjs.parentNode.insertBefore(js, fjs); }(document, 'script', 'facebook-jssdk'));
     </script>
+    
+    <script src="/static/app.js"></script>
 
-    <script>
-        // --- CONFIGURAÇÃO DINÂMICA DA API ---
-        // Pega automaticamente o protocolo, domínio e porta da barra de endereços
-        // Ex: Se você acessar http://192.168.1.15:8000, a API será isso mesmo.
-        const API = window.location.origin;
-
-        // Se você estiver abrindo o arquivo clicando duas vezes (file://), 
-        // ele fallback para localhost para não quebrar.
-        if (API === 'null' || API.startsWith('file:')) {
-            API = "http://127.0.0.1:8000";
-            console.warn("Atenção: Abrindo via arquivo. Algumas funções podem falhar. Acesse pelo IP do servidor.");
-        }
-        var map, userLat = 0,
-            userLng = 0,
-            role = 'cidadao';
-        var mapaTiposCache = {}; // Guarda as informações dos tipos (ícones)
-
-        // --- 1. AUTENTICAÇÃO ---
-
-        function alternarForms() {
-            const login = document.getElementById('formLogin');
-            const cadastro = document.getElementById('formCadastro');
-            if (login.style.display === 'none') {
-                login.style.display = 'block';
-                cadastro.style.display = 'none';
-            } else {
-                login.style.display = 'none';
-                cadastro.style.display = 'block';
-            }
-        }
-
-        async function fazerLoginReal() {
-            const email = document.getElementById('emailLogin').value;
-            const senha = document.getElementById('senhaLogin').value;
-
-            try {
-                const res = await fetch(`${API}/auth/login`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        email,
-                        senha
-                    })
-                });
-
-                if (res.ok) {
-                    const data = await res.json();
-                    localStorage.setItem('token_zeladoria', data.access_token);
-                    entrarApp(data.perfil);
-                } else {
-                    const err = await res.json();
-                    alert("Erro: " + (err.detail || "Falha no login"));
-                }
-            } catch (e) {
-                console.error(e);
-                alert("Erro de conexão");
-            }
-        }
-
-        async function cadastrar() {
-            const load = {
-                email: document.getElementById('emailCad').value,
-                senha: document.getElementById('senhaCad').value,
-                perfil: document.getElementById('perfilCad').value
-            };
-            const res = await fetch(`${API}/auth/cadastro`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(load)
-            });
-            const json = await res.json();
-            alert(json.msg || json.detail);
-            if (res.ok && load.perfil !== 'prefeitura') alternarForms();
-        }
-
-        // --- 2. INICIALIZAÇÃO DO APP ---
-
-        function entrarApp(perfil) {
-            role = perfil;
-
-            // UI Toggle
-            document.getElementById('loginOverlay').style.display = 'none';
-            document.getElementById('navBarApp').style.display = 'flex';
-            document.getElementById('labelPerfil').innerText = role.toUpperCase();
-
-            // Botões por perfil
-            if (role === 'admin') document.getElementById('btnAdmin').style.display = 'inline-block';
-            if (role !== 'prefeitura') document.getElementById('fabBtn').style.display = 'flex';
-            else document.getElementById('fabBtn').style.display = 'none';
-
-            iniciarMapa();
-            carregarTudo();
-        }
-
-        function sair() {
-            localStorage.removeItem('token_zeladoria');
-            location.reload();
-        }
-
-        async function carregarTudo() {
-            await carregarTipos(); // Carrega tipos primeiro para ter os ícones
-            await carregarProblemas(); // Depois carrega os pinos
-        }
-
-        // --- 3. DADOS DINÂMICOS (TIPOS) ---
-
-        async function carregarTipos() {
-            try {
-                const res = await fetch(`${API}/tipos`);
-                const tipos = await res.json();
-
-                mapaTiposCache = {}; // Limpa cache
-                const select = document.getElementById('tipoProblema');
-                select.innerHTML = "";
-
-                // Organiza por categoria
-                const categorias = {};
-                tipos.forEach(t => {
-                    mapaTiposCache[t.chave] = t; // Guarda pra usar no mapa
-                    if (!categorias[t.categoria]) categorias[t.categoria] = [];
-                    categorias[t.categoria].push(t);
-                });
-
-                // Preenche Select
-                for (let cat in categorias) {
-                    let group = document.createElement('optgroup');
-                    group.label = cat;
-                    categorias[cat].forEach(t => {
-                        let opt = document.createElement('option');
-                        opt.value = t.chave;
-                        opt.innerText = `${t.icone} ${t.titulo}`;
-                        group.appendChild(opt);
-                    });
-                    select.appendChild(group);
-                }
-            } catch (e) {
-                console.error("Erro ao carregar tipos", e);
-            }
-        }
-
-        // --- 4. MAPA E PROBLEMAS ---
-
-        function iniciarMapa() {
-            if (map) return;
-            map = L.map('map', {
-                zoomControl: false
-            }).setView([-23.5505, -46.6333], 13);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
-
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(pos => {
-                    userLat = pos.coords.latitude;
-                    userLng = pos.coords.longitude;
-                    map.setView([userLat, userLng], 16);
-                    L.circleMarker([userLat, userLng], {
-                        radius: 8,
-                        color: '#0d6efd'
-                    }).addTo(map);
-                });
-            }
-        }
-
-        async function carregarProblemas() {
-            const res = await fetch(`${API}/problemas`);
-            const dados = await res.json();
-
-            // Limpa mapa
-            map.eachLayer(l => {
-                if (l instanceof L.Marker) map.removeLayer(l);
-            });
-
-            dados.forEach(d => {
-                
-                let info = mapaTiposCache[d.tipo] || {icone: '📍', titulo: d.tipo};
-                let cor = d.status === 'aberto' ? '#dc3545' : (d.status === 'analise' ? '#fd7e14' : '#198754');
-
-                // --- LÓGICA DE DESTAQUE ---
-                // Tamanho base: 20px. Cada voto aumenta o pino em 4px.
-                // Travamos no tamanho máximo de 70px para não poluir o mapa.
-                let tamanho = 20 + ((d.confirmacoes - 1) * 4); 
-                if (tamanho > 70) tamanho = 70;
-
-                // Ajustamos a fonte para acompanhar o crescimento (50% do tamanho do pino)
-                let fonte = tamanho * 0.5;
-
-                // Ajustamos o ponto de ancoragem (onde a ponta do pino toca o mapa)
-                // X é metade da largura, Y é a altura total
-                let ancoraX = tamanho / 2;
-                let ancoraY = tamanho;
-
-                let iconHtml = `<div class="custom-marker" style="border: 3px solid ${cor}; width:${tamanho}px; height:${tamanho}px; font-size:${fonte}px;">${info.icone}</div>`;
-
-                // Passamos o novo tamanho e âncora para o Leaflet
-                let icon = L.divIcon({ 
-                    html: iconHtml, 
-                    className: '', 
-                    iconSize: [tamanho, tamanho], 
-                    iconAnchor: [ancoraX, ancoraY] 
-                });
-
-                let marker = L.marker([d.lat, d.lng], {icon: icon}).addTo(map);
-
-
-
-                // ... (código anterior dentro do forEach)
-
-                // 1. Melhoria no Botão: Mostrar a contagem atual no texto do botão
-                let botoes = "";
-                if (role === 'cidadao') {
-                    if (d.status === 'resolvido') {
-                        botoes =
-                            `<button onclick="acao(${d.id}, 'validar')" class="btn btn-sm btn-success w-100 mt-2">✅ Validar (${d.validacoes_cidadao}/3)</button>`;
-                    } else {
-                        // MUDANÇA AQUI: Adicionei (${d.confirmacoes}) no texto do botão
-                        botoes =
-                            `<button onclick="acao(${d.id}, 'votar')" class="btn btn-sm btn-outline-primary w-100 mt-2">👍 Eu também vi (${d.confirmacoes})</button>`;
-                    }
-                } else if (role === 'prefeitura') {
-                    // ... (botões da prefeitura permanecem iguais)
-                }
-
-                // 2. Melhoria no Popup: Exibir um contador visual no topo
-                marker.bindPopup(`
-                    <div class="d-flex justify-content-between align-items-center">
-                        <b>${info.titulo}</b>
-                        <span class="badge bg-light text-dark border">📢 ${d.confirmacoes}</span>
-                    </div>
-                    ${d.descricao}<br>
-                    <span class="badge bg-secondary">${d.status.toUpperCase()}</span>
-                    ${d.nota_prefeitura ? `<div class="alert alert-warning p-1 mt-1 mb-0 small">${d.nota_prefeitura}</div>` : ''}
-                    ${botoes}
-                `);
-            });
-        }
-
-        async function salvarRelato() {
-            const load = {
-                tipo: document.getElementById('tipoProblema').value,
-                descricao: document.getElementById('descricao').value,
-                lat: userLat,
-                lng: userLng
-            };
-            await fetch(`${API}/problemas`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(load)
-            });
-            bootstrap.Modal.getInstance(document.getElementById('modalRelato')).hide();
-            carregarProblemas();
-        }
-
-        // --- 5. AÇÕES (Votar, Validar, Admin) ---
-
-        async function acao(id, tipo) {
-            let url = "";
-            if (tipo === 'votar') url = `${API}/problemas/${id}/votar`;
-            if (tipo === 'validar') url = `${API}/problemas/${id}/validar`;
-            if (tipo === 'resolvido') url = `${API}/problemas/${id}/status?status=resolvido`;
-            if (tipo === 'analise') url = `${API}/problemas/${id}/status?status=analise`;
-
-            if (tipo === 'nota') {
-                let txt = prompt("Nota oficial:");
-                if (txt) url = `${API}/problemas/${id}/status?status=analise&nota=${encodeURIComponent(txt)}`;
-                else return;
-                await fetch(url, {
-                    method: 'PATCH'
-                });
-            } else {
-                await fetch(url, {
-                    method: tipo.includes('status') ? 'PATCH' : 'POST'
-                });
-            }
-            carregarProblemas();
-        }
-
-        async function deletarProb(id) {
-            if (confirm("Apagar?")) {
-                await fetch(`${API}/problemas/${id}`, {
-                    method: 'DELETE'
-                });
-                carregarProblemas();
-            }
-        }
-
-        // --- 6. ADMIN CRUD TIPOS ---
-
-        function abrirAdmin() {
-            carregarListaAdmin();
-            new bootstrap.Modal(document.getElementById('modalAdmin')).show();
-        }
-
-        async function carregarListaAdmin() {
-            const res = await fetch(`${API}/tipos`);
-            const tipos = await res.json();
-            const tbody = document.getElementById('listaTiposAdmin');
-            tbody.innerHTML = '';
-            tipos.forEach(t => {
-                tbody.innerHTML += `
-                    <tr>
-                        <td class="fs-4">${t.icone}</td>
-                        <td>${t.titulo}<br><small class="text-muted">${t.chave}</small></td>
-                        <td>${t.categoria}</td>
-                        <td><button onclick="adminDelTipo(${t.id})" class="btn btn-sm btn-outline-danger">🗑️</button></td>
-                    </tr>`;
-            });
-        }
-
-        async function adminCriarTipo() {
-            const load = {
-                chave: document.getElementById('newKey').value,
-                titulo: document.getElementById('newTitle').value,
-                categoria: document.getElementById('newCat').value,
-                icone: document.getElementById('newIcon').value
-            };
-            const res = await fetch(`${API}/admin/tipos`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(load)
-            });
-            if (res.ok) {
-                carregarListaAdmin();
-                carregarTipos();
-            } // Atualiza lista e select
-            else alert("Erro ao criar");
-        }
-
-        async function adminDelTipo(id) {
-            if (confirm("Apagar tipo?")) {
-                await fetch(`${API}/admin/tipos/${id}`, {
-                    method: 'DELETE'
-                });
-                carregarListaAdmin();
-                carregarTipos();
-            }
-        }
-
-        // UI Helpers
-        function abrirRelato() {
-            new bootstrap.Modal(document.getElementById('modalRelato')).show();
-        }
-
-        // FB Stub
-        function loginComFacebook() {
-            FB.login(r => {
-                if (r.authResponse) fetchFB(r.authResponse.accessToken, r.authResponse.userID);
-            }, {
-                scope: 'email'
-            });
-        }
-        async function fetchFB(tok, uid) {
-            const res = await fetch(`${API}/auth/facebook`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    accessToken: tok,
-                    userID: uid
-                })
-            });
-            if (res.ok) {
-                const d = await res.json();
-                localStorage.setItem('token_zeladoria', d.access_token);
-                entrarApp(d.perfil);
-            }
-        }
-    </script>
 </body>
-
 </html>
