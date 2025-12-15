@@ -175,17 +175,72 @@ def startup_db():
         db.add(models.Usuario(email="admin@city.com", senha_hash=criar_hash("admin"), perfil="admin", is_active=True))
         db.commit()
     
-    # 2. Popula Tipos Padrão se estiver vazio
+    # 2. Popula Tipos Padrão (Verifica se está vazio para não duplicar)
     if not db.query(models.TipoProblema).first():
-        print("--- POPULANDO TIPOS DE OCORRÊNCIA ---")
+        print("--- POPULANDO LISTA GIGANTE DE OCORRÊNCIAS ---")
         padrao = [
+            # --- INFRAESTRUTURA (VIAS E CALÇADAS) ---
             {"k": "buraco", "t": "Buraco na Rua", "c": "Infraestrutura", "i": "🕳️"},
-            {"k": "luz_queimada", "t": "Lâmpada Queimada", "c": "Iluminação", "i": "🌑"},
-            {"k": "lixo_coleta", "t": "Lixo não Coletado", "c": "Limpeza", "i": "🚛"},
-            {"k": "dengue", "t": "Foco de Dengue", "c": "Saúde", "i": "🦟"},
-            {"k": "inseguranca", "t": "Local Inseguro", "c": "Segurança", "i": "⚠️"},
-            {"k": "arvore", "t": "Árvore Caída", "c": "Natureza", "i": "🪵"}
+            {"k": "afundamento", "t": "Asfalto Cedendo/Afundando", "c": "Infraestrutura", "i": "📉"},
+            {"k": "calcada_quebrada", "t": "Calçada Danificada", "c": "Infraestrutura", "i": "🚶"},
+            {"k": "bueiro_entupido", "t": "Boca de Lobo Entupida", "c": "Infraestrutura", "i": "🌧️"},
+            {"k": "tampa_bueiro", "t": "Tampa de Bueiro Solta/Faltando", "c": "Infraestrutura", "i": "🔘"},
+            {"k": "acessibilidade", "t": "Rampa de Acesso Bloqueada/Quebrada", "c": "Infraestrutura", "i": "♿"},
+            {"k": "ponte", "t": "Ponte/Viaduto com Problema Estrutural", "c": "Infraestrutura", "i": "🌉"},
+            {"k": "ciclovia", "t": "Ciclovia Danificada/Bloqueada", "c": "Infraestrutura", "i": "🚲"},
+            
+            # --- ILUMINAÇÃO E REDE ELÉTRICA ---
+            {"k": "luz_queimada", "t": "Lâmpada do Poste Queimada", "c": "Iluminação", "i": "🌑"},
+            {"k": "luz_acesa", "t": "Lâmpada Acesa durante o Dia", "c": "Iluminação", "i": "☀️"},
+            {"k": "luz_intermitente", "t": "Lâmpada Piscando", "c": "Iluminação", "i": "💡"},
+            {"k": "fios", "t": "Fios Soltos ou Baixos", "c": "Iluminação", "i": "⚡"},
+            {"k": "poste_caido", "t": "Poste Caído ou Torto", "c": "Iluminação", "i": "🚧"},
+            {"k": "caixa_luz", "t": "Caixa de Força Aberta/Exposta", "c": "Iluminação", "i": "🔌"},
+
+            # --- LIMPEZA E SANEAMENTO ---
+            {"k": "lixo_coleta", "t": "Coleta de Lixo não realizada", "c": "Limpeza", "i": "🚛"},
+            {"k": "lixo_irregular", "t": "Descarte Irregular de Lixo", "c": "Limpeza", "i": "🚯"},
+            {"k": "entulho", "t": "Entulho/Restos de Obra na Via", "c": "Limpeza", "i": "🧱"},
+            {"k": "esgoto", "t": "Esgoto a Céu Aberto", "c": "Limpeza", "i": "💩"},
+            {"k": "vazamento_agua", "t": "Vazamento de Água Limpa", "c": "Limpeza", "i": "💧"},
+            {"k": "bueiro_cheiro", "t": "Mau Cheiro vindo do Bueiro", "c": "Limpeza", "i": "🤢"},
+            {"k": "varricao", "t": "Falta de Varrição na Rua", "c": "Limpeza", "i": "🧹"},
+            {"k": "lixeira_quebrada", "t": "Lixeira Pública Quebrada", "c": "Limpeza", "i": "🗑️"},
+
+            # --- TRÂNSITO E MOBILIDADE ---
+            {"k": "semaforo_quebrado", "t": "Semáforo Quebrado/Desligado", "c": "Trânsito", "i": "🚦"},
+            {"k": "placa_danificada", "t": "Placa de Sinalização Derrubada", "c": "Trânsito", "i": "🛑"},
+            {"k": "placa_pichada", "t": "Placa Ilegível/Pichada", "c": "Trânsito", "i": "🚫"},
+            {"k": "sinalizacao_chao", "t": "Faixa de Pedestre/Pare Apagada", "c": "Trânsito", "i": "🛣️"},
+            {"k": "carro_abandonado", "t": "Veículo Abandonado na Via", "c": "Trânsito", "i": "🚗"},
+            {"k": "estacionamento", "t": "Estacionamento Irregular", "c": "Trânsito", "i": "🅿️"},
+            {"k": "ponto_onibus", "t": "Ponto de Ônibus Danificado", "c": "Trânsito", "i": "🚏"},
+
+            # --- NATUREZA E PAISAGISMO ---
+            {"k": "arvore_caida", "t": "Árvore Caída na Via", "c": "Natureza", "i": "🪵"},
+            {"k": "arvore_risco", "t": "Árvore com Risco de Queda", "c": "Natureza", "i": "🌳"},
+            {"k": "poda", "t": "Necessidade de Poda (Galhos)", "c": "Natureza", "i": "✂️"},
+            {"k": "raiz", "t": "Raiz Levantando Calçada", "c": "Natureza", "i": "🌱"},
+            {"k": "mato_alto", "t": "Terreno/Praça com Mato Alto", "c": "Natureza", "i": "🌾"},
+            {"k": "jardim", "t": "Jardim Público Abandonado", "c": "Natureza", "i": "🌻"},
+
+            # --- SAÚDE PÚBLICA E ZOONOSES ---
+            {"k": "dengue", "t": "Foco de Água Parada (Dengue)", "c": "Saúde", "i": "🦟"},
+            {"k": "escorpião", "t": "Aparecimento de Escorpiões/Aranhas", "c": "Saúde", "i": "🦂"},
+            {"k": "roedores", "t": "Infestação de Ratos", "c": "Saúde", "i": "🐀"},
+            {"k": "animal_morto", "t": "Animal Morto na Via", "c": "Saúde", "i": "☠️"},
+            {"k": "pombos", "t": "Excesso de Pombos/Sujeira", "c": "Saúde", "i": "🐦"},
+            {"k": "caramujo", "t": "Infestação de Caramujo Africano", "c": "Saúde", "i": "🐌"},
+
+            # --- SEGURANÇA E SOCIAL ---
+            {"k": "inseguranca", "t": "Local Escuro/Perigoso", "c": "Segurança", "i": "⚠️"},
+            {"k": "barulho", "t": "Poluição Sonora/Perturbação", "c": "Social", "i": "📢"},
+            {"k": "pichacao", "t": "Pichação em Prédio Público", "c": "Social", "i": "🎨"},
+            {"k": "vandalismo", "t": "Vandalismo (Bancos, Parquinhos)", "c": "Social", "i": "🔨"},
+            {"k": "social_rua", "t": "Pessoa em Situação de Rua (Auxílio)", "c": "Social", "i": "🤝"},
+            {"k": "ocupacao", "t": "Ocupação Irregular de Área Pública", "c": "Social", "i": "⛺"}
         ]
+        
         for item in padrao:
             db.add(models.TipoProblema(chave=item["k"], titulo=item["t"], categoria=item["c"], icone=item["i"]))
         db.commit()

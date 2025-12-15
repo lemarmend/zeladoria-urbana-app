@@ -175,7 +175,17 @@
     </script>
 
     <script>
-        const API = "http://127.0.0.1:8000";
+        // --- CONFIGURAÇÃO DINÂMICA DA API ---
+        // Pega automaticamente o protocolo, domínio e porta da barra de endereços
+        // Ex: Se você acessar http://192.168.1.15:8000, a API será isso mesmo.
+        const API = window.location.origin;
+
+        // Se você estiver abrindo o arquivo clicando duas vezes (file://), 
+        // ele fallback para localhost para não quebrar.
+        if (API === 'null' || API.startsWith('file:')) {
+            API = "http://127.0.0.1:8000"; 
+            console.warn("Atenção: Abrindo via arquivo. Algumas funções podem falhar. Acesse pelo IP do servidor.");
+        }
         var map, userLat=0, userLng=0, role='cidadao';
         var mapaTiposCache = {}; // Guarda as informações dos tipos (ícones)
 
