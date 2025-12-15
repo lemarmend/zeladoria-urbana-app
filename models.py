@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, Text, Boolean, ForeignKey
+from sqlalchemy.orm import relationship
 from datetime import datetime
 from database import Base
 
@@ -21,7 +22,7 @@ class TipoProblema(Base):
 class Problema(Base):
     __tablename__ = "problemas"
     id = Column(Integer, primary_key=True, index=True)
-    tipo = Column(String) # Vai guardar a 'chave' do tipo
+    tipo = Column(String)
     descricao = Column(Text)
     lat = Column(Float)
     lng = Column(Float)
@@ -31,3 +32,14 @@ class Problema(Base):
     validacoes_cidadao = Column(Integer, default=0)
     nota_prefeitura = Column(Text, nullable=True)
     data_criacao = Column(DateTime, default=datetime.now)
+
+    fotos = relationship("Foto", back_populates="problema", cascade="all, delete-orphan")
+
+# NOVA CLASSE FOTO
+class Foto(Base):
+    __tablename__ = "fotos"
+    id = Column(Integer, primary_key=True, index=True)
+    url = Column(String) # Caminho do arquivo ou URL
+    problema_id = Column(Integer, ForeignKey("problemas.id"))
+    
+    problema = relationship("Problema", back_populates="fotos")

@@ -121,8 +121,15 @@
                     </div>
                     <div class="mb-3">
                         <label class="fw-bold form-label">Detalhes</label>
-                        <textarea id="descricao" class="form-control" rows="3" placeholder="Ex: Buraco fundo na faixa da direita..."></textarea>
+                        <textarea id="descricao" class="form-control" rows="3" placeholder="Ex: Buraco fundo..."></textarea>
                     </div>
+                    
+                    <div class="mb-3">
+                        <label class="fw-bold form-label">Fotos (Máx 3)</label>
+                        <input type="file" id="fotosInput" class="form-control" accept="image/*" multiple>
+                        <div class="form-text">Tire fotos do local para agilizar o atendimento.</div>
+                    </div>
+                    
                     <button class="btn btn-primary w-100 fw-bold" onclick="salvarRelato()">REPORTAR AGORA</button>
                 </div>
             </div>

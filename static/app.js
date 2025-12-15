@@ -169,13 +169,25 @@ async function carregarProblemas() {
             botoes = `<button onclick="deletarProb(${d.id})" class="btn btn-sm btn-danger w-100 mt-2">🗑️ Apagar</button>`;
         }
 
+        // Gera HTML das miniaturas das fotos
+        let fotosHtml = "";
+        if(d.fotos && d.fotos.length > 0) {
+            fotosHtml = `<div class="d-flex gap-1 mt-2 mb-2 overflow-auto">`;
+            d.fotos.forEach(f => {
+                // API é a URL base definida no script original
+                fotosHtml += `<a href="${API}${f.url}" target="_blank">
+                                <img src="${API}${f.url}" style="width:50px; height:50px; object-fit:cover; border-radius:4px; border:1px solid #ccc;">
+                            </a>`;
+            });
+            fotosHtml += `</div>`;
+        }
+
+        // ... configuração dos botões ...
+
         marker.bindPopup(`
-            <div class="d-flex justify-content-between align-items-center">
-                <b>${info.titulo}</b>
-                <span class="badge bg-light text-dark border">📢 ${d.confirmacoes}</span>
-            </div>
+            <b>${info.titulo}</b><br>
             ${d.descricao}<br>
-            <span class="badge bg-secondary">${d.status.toUpperCase()}</span>
+            ${fotosHtml} <span class="badge bg-secondary">${d.status.toUpperCase()}</span>
             ${d.nota_prefeitura ? `<div class="alert alert-warning p-1 mt-1 mb-0 small">${d.nota_prefeitura}</div>` : ''}
             ${botoes}
         `);
@@ -183,16 +195,46 @@ async function carregarProblemas() {
 }
 
 async function salvarRelato() {
-    const load = {
-        tipo: document.getElementById('tipoProblema').value,
-        descricao: document.getElementById('descricao').value,
-        lat: userLat, lng: userLng
-    };
-    await fetch(`${API}/problemas`, {
-        method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(load)
-    });
-    bootstrap.Modal.getInstance(document.getElementById('modalRelato')).hide();
-    carregarProblemas();
+    const tipo = document.getElementById('tipoProblema').value;
+    const descricao = document.getElementById('descricao').value;
+    const inputFotos = document.getElementById('fotosInput');
+
+    // Validação simples
+    if(inputFotos.files.length > 3) {
+        alert("Por favor, selecione no máximo 3 fotos.");
+        return;
+    }
+
+    // Usamos FormData para enviar arquivos + texto
+    const formData = new FormData();
+    formData.append('tipo', tipo);
+    formData.append('descricao', descricao);
+    formData.append('lat', userLat);
+    formData.append('lng', userLng);
+
+    // Adiciona cada arquivo ao FormData
+    for (let i = 0; i < inputFotos.files.length; i++) {
+        formData.append('imagens', inputFotos.files[i]);
+    }
+
+    try {
+        const res = await fetch(`${API}/problemas`, {
+            method: 'POST',
+            // NÃO setar Content-Type: application/json aqui!
+            // O navegador define automaticamente o multipart/form-data boundary
+            body: formData 
+        });
+
+        if(res.ok) {
+            bootstrap.Modal.getInstance(document.getElementById('modalRelato')).hide();
+            // Limpar campos
+            document.getElementById('descricao').value = "";
+            document.getElementById('fotosInput').value = "";
+            carregarProblemas();
+        } else {
+            alert("Erro ao enviar relato.");
+        }
+    } catch(e) { console.error(e); }
 }
 
 // --- 5. AÇÕES ---

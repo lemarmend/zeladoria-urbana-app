@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Form, File, UploadFile # Adicionado Form, File, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -11,6 +11,9 @@ import requests
 import models
 from database import engine, get_db
 from fastapi.staticfiles import StaticFiles
+import os
+import shutil
+import uuid
 
 # --- CONFIGURAÇÕES ---
 SECRET_KEY = "segredo-super-secreto"
@@ -22,6 +25,10 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="Zeladoria Urbana")
 
+# --- NOVO: CRIAR PASTA DE UPLOADS E MONTAR STATIC ---
+UPLOAD_DIR = "static/fotos"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
 # Crie uma pasta chamada "static" na raiz do projeto se não existir!
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
@@ -31,6 +38,10 @@ app.add_middleware(
 )
 
 # --- SCHEMAS ---
+class FotoResponse(BaseModel):
+    url: str
+    class Config: from_attributes = True
+
 class LoginData(BaseModel):
     email: str; senha: str
 
@@ -53,8 +64,18 @@ class TipoProblemaResponse(TipoProblemaCreate):
 class ProblemaCreate(BaseModel):
     tipo: str; descricao: str; lat: float; lng: float
 
-class ProblemaResponse(ProblemaCreate):
-    id: int; status: str; confirmacoes: int; validacoes_cidadao: int; nota_prefeitura: Optional[str] = None; data_criacao: datetime
+class ProblemaResponse(BaseModel): # Removido herança de ProblemaCreate pois mudamos a entrada
+    id: int
+    tipo: str
+    descricao: str
+    lat: float
+    lng: float
+    status: str
+    confirmacoes: int
+    validacoes_cidadao: int
+    nota_prefeitura: Optional[str] = None
+    data_criacao: datetime
+    fotos: List[FotoResponse] = [] # Lista de fotos
     class Config: from_attributes = True
 
 # --- SEGURANÇA ---
@@ -84,11 +105,30 @@ def criar_tipo_problema(tipo: TipoProblemaCreate, db: Session = Depends(get_db))
     db.add(novo); db.commit(); db.refresh(novo)
     return novo
 
-@app.delete("/admin/tipos/{id}")
-def deletar_tipo_problema(id: int, db: Session = Depends(get_db)):
-    t = db.query(models.TipoProblema).filter(models.TipoProblema.id == id).first()
-    if t: db.delete(t); db.commit()
-    return {"msg": "Deletado"}
+@app.delete("/problemas/{id}")
+def deletar(id: int, db: Session = Depends(get_db)):
+    # 1. Busca o problema (trazendo as fotos junto devido ao relacionamento)
+    prob = db.query(models.Problema).filter(models.Problema.id == id).first()
+    
+    if not prob:
+        raise HTTPException(status_code=404, detail="Problema não encontrado")
+
+    # 2. Apaga os arquivos físicos da pasta 'static/fotos'
+    for foto in prob.fotos:
+        # A url salva é "/static/fotos/arquivo.jpg". Removemos a primeira barra para o caminho funcionar.
+        caminho_arquivo = foto.url.lstrip("/") 
+        
+        # Verifica se o arquivo existe antes de tentar apagar para não dar erro
+        if os.path.exists(caminho_arquivo):
+            os.remove(caminho_arquivo)
+
+    # 3. Apaga o registro do banco
+    # Ao usar db.delete(prob) em vez de query().delete(), o SQLAlchemy aciona o 'cascade'
+    # e apaga as linhas da tabela 'fotos' automaticamente.
+    db.delete(prob)
+    db.commit()
+
+    return {"ok": True}
 
 # --- ROTAS DE AUTENTICAÇÃO ---
 
@@ -138,9 +178,42 @@ def listar_probs(db: Session = Depends(get_db)):
     return db.query(models.Problema).filter(models.Problema.status != 'arquivado').all()
 
 @app.post("/problemas", response_model=ProblemaResponse)
-def criar_prob(p: ProblemaCreate, db: Session = Depends(get_db)):
-    novo = models.Problema(**p.dict())
-    db.add(novo); db.commit(); db.refresh(novo); return novo
+def criar_prob(
+    tipo: str = Form(...), 
+    descricao: str = Form(...), 
+    lat: float = Form(...), 
+    lng: float = Form(...),
+    imagens: List[UploadFile] = File(default=None), # Recebe lista de arquivos
+    db: Session = Depends(get_db)
+):
+    # 1. Cria o problema
+    novo_prob = models.Problema(tipo=tipo, descricao=descricao, lat=lat, lng=lng)
+    db.add(novo_prob)
+    db.commit()
+    db.refresh(novo_prob)
+
+    # 2. Processa as Imagens (Máximo 3)
+    if imagens:
+        for img in imagens[:3]: # Garante limite de 3 no backend também
+            if img.filename:
+                # Gera nome único para não sobrescrever
+                extensao = img.filename.split(".")[-1]
+                nome_arquivo = f"{uuid.uuid4()}.{extensao}"
+                caminho_final = os.path.join(UPLOAD_DIR, nome_arquivo)
+                
+                # Salva no disco
+                with open(caminho_final, "wb") as buffer:
+                    shutil.copyfileobj(img.file, buffer)
+                
+                # Salva no Banco (URL relativa)
+                url_relativa = f"/static/fotos/{nome_arquivo}"
+                nova_foto = models.Foto(url=url_relativa, problema_id=novo_prob.id)
+                db.add(nova_foto)
+        
+        db.commit()
+        db.refresh(novo_prob)
+
+    return novo_prob
 
 @app.post("/problemas/{id}/votar")
 def votar(id: int, db: Session = Depends(get_db)):
