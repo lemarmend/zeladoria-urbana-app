@@ -197,21 +197,34 @@ async function salvarRelato() {
 
 // --- 5. AÇÕES ---
 
+// Substitua a função acao antiga por esta:
+
 async function acao(id, tipo) {
     let url = "";
+    let method = "POST"; // Padrão para votar e validar
+
     if(tipo === 'votar') url = `${API}/problemas/${id}/votar`;
     if(tipo === 'validar') url = `${API}/problemas/${id}/validar`;
-    if(tipo === 'resolvido') url = `${API}/problemas/${id}/status?status=resolvido`;
-    if(tipo === 'analise') url = `${API}/problemas/${id}/status?status=analise`;
     
+    // Casos de Status (Analise e Resolvido) exigem PATCH
+    if(tipo === 'resolvido' || tipo === 'analise') {
+        url = `${API}/problemas/${id}/status?status=${tipo}`;
+        method = "PATCH"; // <--- Correção aqui
+    }
+    
+    // Caso de Nota (também exige PATCH)
     if(tipo === 'nota') {
         let txt = prompt("Nota oficial:");
-        if(txt) url = `${API}/problemas/${id}/status?status=analise&nota=${encodeURIComponent(txt)}`;
-        else return;
-        await fetch(url, {method:'PATCH'}); 
-    } else {
-        await fetch(url, {method: tipo.includes('status') ? 'PATCH' : 'POST'});
+        if(txt) {
+            url = `${API}/problemas/${id}/status?status=analise&nota=${encodeURIComponent(txt)}`;
+            method = "PATCH";
+        } else {
+            return; // Cancela se não digitar nada
+        }
     }
+
+    // Executa a requisição com o método e URL corretos
+    await fetch(url, {method: method});
     carregarProblemas();
 }
 
