@@ -13,4 +13,4 @@ Sistema para mapeamento colaborativo de problemas urbanos (buracos, iluminação
 2. Crie um ambiente virtual: `python -m venv venv`
 3. Ative o venv e instale as dependências: `pip install -r requirements.txt`
 4. Rode o servidor: `uvicorn main:app --reload`
-5. Abra o arquivo `app_cidade.html` no navegador.
+5. Abra o endereço `127.0.0.1:8000` no navegador.
