@@ -7,6 +7,7 @@ if (API === 'null' || API.startsWith('file:')) {
 
 var map, userLat = 0, userLng = 0, role = 'cidadao';
 var mapaTiposCache = {}; 
+var pollingInterval; // [NOVO] Variável para controlar o polling
 
 // --- FACEBOOK INIT ---
 window.fbAsyncInit = function() {
@@ -72,9 +73,20 @@ function entrarApp(perfil) {
 
     iniciarMapa();
     carregarTudo();
+
+    // [NOVO] INÍCIO DO POLLING
+    // Chama carregarProblemas a cada 10000ms (10 segundos)
+    if (pollingInterval) clearInterval(pollingInterval); // Previne duplicidade
+    pollingInterval = setInterval(() => {
+        console.log("Atualizando mapa..."); // Opcional: para debug
+        carregarProblemas();
+    }, 10000);
 }
 
 function sair() {
+    // [NOVO] Limpa o polling ao sair
+    if (pollingInterval) clearInterval(pollingInterval);
+    
     localStorage.removeItem('token_zeladoria');
     location.reload();
 }
@@ -132,66 +144,69 @@ function iniciarMapa() {
 }
 
 async function carregarProblemas() {
-    const res = await fetch(`${API}/problemas`);
-    const dados = await res.json();
+    // [IMPORTANTE] Não precisamos mudar muito aqui, pois a função já limpa
+    // os marcadores antigos antes de adicionar os novos.
     
-    map.eachLayer(l => { if(l instanceof L.Marker) map.removeLayer(l); });
-
-    dados.forEach(d => {
-        let info = mapaTiposCache[d.tipo] || {icone: '📍', titulo: d.tipo};
-        let cor = d.status === 'aberto' ? '#dc3545' : (d.status === 'analise' ? '#fd7e14' : '#198754');
+    try {
+        const res = await fetch(`${API}/problemas`);
+        if(!res.ok) return; // Se der erro na rede, ignora silenciosamente
         
-        // --- LÓGICA DE TAMANHO DINÂMICO ---
-        let tamanho = 35 + ((d.confirmacoes - 1) * 4); 
-        if (tamanho > 70) tamanho = 70;
-        let fonte = tamanho * 0.5;
-        let ancoraX = tamanho / 2;
-        let ancoraY = tamanho;
-
-        let iconHtml = `<div class="custom-marker" style="border: 3px solid ${cor}; width:${tamanho}px; height:${tamanho}px; font-size:${fonte}px;">${info.icone}</div>`;
-        let icon = L.divIcon({ html: iconHtml, className: '', iconSize: [tamanho, tamanho], iconAnchor: [ancoraX, ancoraY] });
-
-        let marker = L.marker([d.lat, d.lng], {icon: icon}).addTo(map);
+        const dados = await res.json();
         
-        // --- POPUP COM CONTADORES ---
-        let botoes = "";
-        if(role === 'cidadao') {
-             if(d.status === 'resolvido') botoes = `<button onclick="acao(${d.id}, 'validar')" class="btn btn-sm btn-success w-100 mt-2">✅ Validar (${d.validacoes_cidadao}/3)</button>`;
-             else botoes = `<button onclick="acao(${d.id}, 'votar')" class="btn btn-sm btn-outline-primary w-100 mt-2">👍 Eu também vi (${d.confirmacoes})</button>`;
-        } else if(role === 'prefeitura') {
-            botoes = `
-                <div class="mt-2 btn-group w-100">
-                    <button onclick="acao(${d.id}, 'analise')" class="btn btn-sm btn-warning">👀</button>
-                    <button onclick="acao(${d.id}, 'nota')" class="btn btn-sm btn-secondary">📝</button>
-                    <button onclick="acao(${d.id}, 'resolvido')" class="btn btn-sm btn-success">✅</button>
-                </div>`;
-        } else if(role === 'admin') {
-            botoes = `<button onclick="deletarProb(${d.id})" class="btn btn-sm btn-danger w-100 mt-2">🗑️ Apagar</button>`;
-        }
+        // Remove apenas os marcadores de problemas (L.Marker)
+        // Preserva o L.CircleMarker da localização do usuário
+        map.eachLayer(l => { if(l instanceof L.Marker) map.removeLayer(l); });
 
-        // Gera HTML das miniaturas das fotos
-        let fotosHtml = "";
-        if(d.fotos && d.fotos.length > 0) {
-            fotosHtml = `<div class="d-flex gap-1 mt-2 mb-2 overflow-auto">`;
-            d.fotos.forEach(f => {
-                // API é a URL base definida no script original
-                fotosHtml += `<a href="${API}${f.url}" target="_blank">
-                                <img src="${API}${f.url}" style="width:50px; height:50px; object-fit:cover; border-radius:4px; border:1px solid #ccc;">
-                            </a>`;
-            });
-            fotosHtml += `</div>`;
-        }
+        dados.forEach(d => {
+            let info = mapaTiposCache[d.tipo] || {icone: '📍', titulo: d.tipo};
+            let cor = d.status === 'aberto' ? '#dc3545' : (d.status === 'analise' ? '#fd7e14' : '#198754');
+            
+            let tamanho = 35 + ((d.confirmacoes - 1) * 4); 
+            if (tamanho > 70) tamanho = 70;
+            let fonte = tamanho * 0.5;
+            let ancoraX = tamanho / 2;
+            let ancoraY = tamanho;
 
-        // ... configuração dos botões ...
+            let iconHtml = `<div class="custom-marker" style="border: 3px solid ${cor}; width:${tamanho}px; height:${tamanho}px; font-size:${fonte}px;">${info.icone}</div>`;
+            let icon = L.divIcon({ html: iconHtml, className: '', iconSize: [tamanho, tamanho], iconAnchor: [ancoraX, ancoraY] });
 
-        marker.bindPopup(`
-            <b>${info.titulo}</b><br>
-            ${d.descricao}<br>
-            ${fotosHtml} <span class="badge bg-secondary">${d.status.toUpperCase()}</span>
-            ${d.nota_prefeitura ? `<div class="alert alert-warning p-1 mt-1 mb-0 small">${d.nota_prefeitura}</div>` : ''}
-            ${botoes}
-        `);
-    });
+            let marker = L.marker([d.lat, d.lng], {icon: icon}).addTo(map);
+            
+            let botoes = "";
+            if(role === 'cidadao') {
+                 if(d.status === 'resolvido') botoes = `<button onclick="acao(${d.id}, 'validar')" class="btn btn-sm btn-success w-100 mt-2">✅ Validar (${d.validacoes_cidadao}/3)</button>`;
+                 else botoes = `<button onclick="acao(${d.id}, 'votar')" class="btn btn-sm btn-outline-primary w-100 mt-2">👍 Eu também vi (${d.confirmacoes})</button>`;
+            } else if(role === 'prefeitura') {
+                botoes = `
+                    <div class="mt-2 btn-group w-100">
+                        <button onclick="acao(${d.id}, 'analise')" class="btn btn-sm btn-warning">👀</button>
+                        <button onclick="acao(${d.id}, 'nota')" class="btn btn-sm btn-secondary">📝</button>
+                        <button onclick="acao(${d.id}, 'resolvido')" class="btn btn-sm btn-success">✅</button>
+                    </div>`;
+            } else if(role === 'admin') {
+                botoes = `<button onclick="deletarProb(${d.id})" class="btn btn-sm btn-danger w-100 mt-2">🗑️ Apagar</button>`;
+            }
+
+            let fotosHtml = "";
+            if(d.fotos && d.fotos.length > 0) {
+                fotosHtml = `<div class="d-flex gap-1 mt-2 mb-2 overflow-auto">`;
+                d.fotos.forEach(f => {
+                    fotosHtml += `<a href="${API}${f.url}" target="_blank">
+                                    <img src="${API}${f.url}" style="width:50px; height:50px; object-fit:cover; border-radius:4px; border:1px solid #ccc;">
+                                </a>`;
+                });
+                fotosHtml += `</div>`;
+            }
+
+            marker.bindPopup(`
+                <b>${info.titulo}</b><br>
+                ${d.descricao}<br>
+                ${fotosHtml} <span class="badge bg-secondary">${d.status.toUpperCase()}</span>
+                ${d.nota_prefeitura ? `<div class="alert alert-warning p-1 mt-1 mb-0 small">${d.nota_prefeitura}</div>` : ''}
+                ${botoes}
+            `);
+        });
+    } catch(e) { console.error("Polling error:", e); }
 }
 
 async function salvarRelato() {
@@ -199,20 +214,17 @@ async function salvarRelato() {
     const descricao = document.getElementById('descricao').value;
     const inputFotos = document.getElementById('fotosInput');
 
-    // Validação simples
     if(inputFotos.files.length > 3) {
         alert("Por favor, selecione no máximo 3 fotos.");
         return;
     }
 
-    // Usamos FormData para enviar arquivos + texto
     const formData = new FormData();
     formData.append('tipo', tipo);
     formData.append('descricao', descricao);
     formData.append('lat', userLat);
     formData.append('lng', userLng);
 
-    // Adiciona cada arquivo ao FormData
     for (let i = 0; i < inputFotos.files.length; i++) {
         formData.append('imagens', inputFotos.files[i]);
     }
@@ -220,17 +232,16 @@ async function salvarRelato() {
     try {
         const res = await fetch(`${API}/problemas`, {
             method: 'POST',
-            // NÃO setar Content-Type: application/json aqui!
-            // O navegador define automaticamente o multipart/form-data boundary
             body: formData 
         });
 
         if(res.ok) {
             bootstrap.Modal.getInstance(document.getElementById('modalRelato')).hide();
-            // Limpar campos
             document.getElementById('descricao').value = "";
             document.getElementById('fotosInput').value = "";
-            carregarProblemas();
+            // Chamamos carregarProblemas imediatamente para o usuário ver o próprio relato
+            // sem esperar os 5 segundos do polling
+            carregarProblemas(); 
         } else {
             alert("Erro ao enviar relato.");
         }
@@ -239,35 +250,30 @@ async function salvarRelato() {
 
 // --- 5. AÇÕES ---
 
-// Substitua a função acao antiga por esta:
-
 async function acao(id, tipo) {
     let url = "";
-    let method = "POST"; // Padrão para votar e validar
+    let method = "POST"; 
 
     if(tipo === 'votar') url = `${API}/problemas/${id}/votar`;
     if(tipo === 'validar') url = `${API}/problemas/${id}/validar`;
     
-    // Casos de Status (Analise e Resolvido) exigem PATCH
     if(tipo === 'resolvido' || tipo === 'analise') {
         url = `${API}/problemas/${id}/status?status=${tipo}`;
-        method = "PATCH"; // <--- Correção aqui
+        method = "PATCH"; 
     }
     
-    // Caso de Nota (também exige PATCH)
     if(tipo === 'nota') {
         let txt = prompt("Nota oficial:");
         if(txt) {
             url = `${API}/problemas/${id}/status?status=analise&nota=${encodeURIComponent(txt)}`;
             method = "PATCH";
         } else {
-            return; // Cancela se não digitar nada
+            return; 
         }
     }
 
-    // Executa a requisição com o método e URL corretos
     await fetch(url, {method: method});
-    carregarProblemas();
+    carregarProblemas(); // Atualiza imediatamente após ação
 }
 
 async function deletarProb(id) {
